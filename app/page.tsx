@@ -126,6 +126,21 @@ export default function Home() {
           }}
         >
           <button
+            onClick={() => router.push("/feed")}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid rgba(34,197,94,0.5)",
+              background: "rgba(34,197,94,0.15)",
+              color: "#22c55e",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            View Feed
+          </button>
+
+          <button
             onClick={() => goSearch(q || "epstein")}
             style={{
               padding: "10px 12px",
