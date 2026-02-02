@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 
 // Simple Levenshtein distance for typo detection
 function levenshtein(a: string, b: string): number {
@@ -30,6 +31,7 @@ function levenshtein(a: string, b: string): number {
 
 export default function Home() {
   const router = useRouter();
+  const { isSignedIn, user } = useUser();
   const [q, setQ] = React.useState("");
   const [smartSuggestion, setSmartSuggestion] = React.useState<string | null>(null);
 
@@ -279,26 +281,59 @@ export default function Home() {
             Browse topics
           </button>
 
-          <span
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.22)",
-              background: "rgba(255,255,255,0.10)",
-            }}
-          >
-            Create account
-          </span>
+          {isSignedIn ? (
+            <>
+              <div
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(34,197,94,0.3)",
+                  background: "rgba(34,197,94,0.1)",
+                  color: "#22c55e",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                }}
+              >
+                <span>👋 {user?.firstName || user?.username || "User"}</span>
+                <UserButton />
+              </div>
+            </>
+          ) : (
+            <>
+              <SignInButton mode="modal">
+                <button
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "transparent",
+                    color: "rgba(255,255,255,0.9)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Sign In
+                </button>
+              </SignInButton>
 
-          <span
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.12)",
-            }}
-          >
-            Journalist mode
-          </span>
+              <SignUpButton mode="modal">
+                <button
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(34,197,94,0.5)",
+                    background: "rgba(34,197,94,0.15)",
+                    color: "#22c55e",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Create Account
+                </button>
+              </SignUpButton>
+            </>
+          )}
         </div>
 
         <div
