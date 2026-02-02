@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 
 type Rundown = {
   topic: string;
@@ -10,6 +11,25 @@ type Rundown = {
   summary: string[];
   keyClaims: { label: string; confidence: number; notes: string }[];
   related: string[];
+};
+
+type ForumPost = {
+  id: string;
+  user: {
+    name: string;
+    avatar: string;
+    credibility: number;
+    isJournalist?: boolean;
+  };
+  title: string;
+  content: string;
+  aiVerdict: "Verified" | "Mixed" | "False" | "Unverified";
+  aiConfidence: number;
+  upvotes: number;
+  downvotes: number;
+  commentCount: number;
+  timestamp: string;
+  sources?: string[];
 };
 
 function fakeRundown(topic: string): Rundown {
@@ -35,7 +55,7 @@ function fakeRundown(topic: string): Rundown {
       : [
           `${topic} timeline`,
           `${topic} key claims`,
-          `${topic} what’s verified`,
+          `${topic} what's verified`,
           `${topic} disputed points`,
           `${topic} primary sources`,
         ];
@@ -45,7 +65,7 @@ function fakeRundown(topic: string): Rundown {
     updatedAt: new Date().toLocaleString(),
     verdict,
     summary: [
-      `This is a demo “facts-first” rundown for “${topic}”.`,
+      `This is a demo "facts-first" rundown for "${topic}".`,
       `It shows what the page will look like before we plug in the real AI.`,
       `Next step: replace this generator with a server API call + sources.`,
     ],
@@ -73,6 +93,82 @@ function fakeRundown(topic: string): Rundown {
   };
 }
 
+function fakeForumPosts(topic: string): ForumPost[] {
+  const lower = topic.toLowerCase();
+
+  if (lower === "epstein") {
+    return [
+      {
+        id: "f1",
+        user: { name: "Dr. Sarah Mitchell", avatar: "👩‍🔬", credibility: 89, isJournalist: true },
+        title: "Flight log analysis - what's actually verified",
+        content: "I've cross-referenced the released flight logs with public records. Here's what we can confirm with high certainty vs. what's speculation...",
+        aiVerdict: "Verified",
+        aiConfidence: 92,
+        upvotes: 234,
+        downvotes: 12,
+        commentCount: 45,
+        timestamp: "3h ago",
+        sources: ["FBI.gov records", "Court documents (Southern District NY)"],
+      },
+      {
+        id: "f2",
+        user: { name: "TruthSeeker99", avatar: "🕵️", credibility: 28 },
+        title: "Everyone in Hollywood is connected to this",
+        content: "Wake up! Every celebrity has been to the island. They're all involved in the cover-up!",
+        aiVerdict: "False",
+        aiConfidence: 88,
+        upvotes: 8,
+        downvotes: 156,
+        commentCount: 89,
+        timestamp: "5h ago",
+      },
+      {
+        id: "f3",
+        user: { name: "Alex Rivera", avatar: "🧑", credibility: 71 },
+        title: "Timeline of legal proceedings",
+        content: "Putting together a comprehensive timeline from the 2008 plea deal through the 2019 arrest. Some gaps in public record that need clarification.",
+        aiVerdict: "Mixed",
+        aiConfidence: 76,
+        upvotes: 67,
+        downvotes: 5,
+        commentCount: 23,
+        timestamp: "1d ago",
+        sources: ["Miami Herald investigative series", "DOJ press releases"],
+      },
+    ];
+  }
+
+  // Generic posts for other topics
+  return [
+    {
+      id: "f4",
+      user: { name: "Demo User", avatar: "👤", credibility: 75 },
+      title: `What are the verified facts about ${topic}?`,
+      content: `Looking for primary sources and verified information about ${topic}. What do we actually know vs. what's speculation?`,
+      aiVerdict: "Unverified",
+      aiConfidence: 65,
+      upvotes: 12,
+      downvotes: 2,
+      commentCount: 8,
+      timestamp: "2h ago",
+    },
+    {
+      id: "f5",
+      user: { name: "Jane Smith", avatar: "👩", credibility: 82, isJournalist: true },
+      title: `Recent developments on ${topic}`,
+      content: `Summary of recent credible reporting and official statements regarding ${topic}. Sources linked below.`,
+      aiVerdict: "Verified",
+      aiConfidence: 87,
+      upvotes: 45,
+      downvotes: 3,
+      commentCount: 15,
+      timestamp: "6h ago",
+      sources: ["Reuters", "AP News"],
+    },
+  ];
+}
+
 function badgeColor(verdict: Rundown["verdict"]) {
   switch (verdict) {
     case "Verified":
@@ -84,17 +180,205 @@ function badgeColor(verdict: Rundown["verdict"]) {
   }
 }
 
+function forumVerdictColor(verdict: ForumPost["aiVerdict"]) {
+  switch (verdict) {
+    case "Verified":
+      return { bg: "rgba(34,197,94,0.15)", text: "#22c55e", border: "#22c55e" };
+    case "Mixed":
+      return { bg: "rgba(234,179,8,0.15)", text: "#eab308", border: "#eab308" };
+    case "False":
+      return { bg: "rgba(239,68,68,0.15)", text: "#ef4444", border: "#ef4444" };
+    case "Unverified":
+      return { bg: "rgba(148,163,184,0.15)", text: "#94a3b8", border: "#94a3b8" };
+  }
+}
+
+function ForumPostCard({ post }: { post: ForumPost }) {
+  const verdict = forumVerdictColor(post.aiVerdict);
+  const score = post.upvotes - post.downvotes;
+
+  return (
+    <div
+      style={{
+        padding: 16,
+        borderRadius: 10,
+        border: `1px solid ${verdict.border}30`,
+        background: "rgba(255,255,255,0.03)",
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        {/* Vote column */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 4,
+            minWidth: 40,
+          }}
+        >
+          <button
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 4,
+              padding: "4px 8px",
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            ▲
+          </button>
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 14,
+              color: score > 0 ? "#22c55e" : score < 0 ? "#ef4444" : "white",
+            }}
+          >
+            {score}
+          </span>
+          <button
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 4,
+              padding: "4px 8px",
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            ▼
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1 }}>
+          {/* User info */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 20 }}>{post.user.avatar}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 13 }}>{post.user.name}</span>
+                {post.user.isJournalist && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      padding: "2px 5px",
+                      borderRadius: 3,
+                      background: "rgba(59,130,246,0.2)",
+                      color: "#60a5fa",
+                      fontWeight: 600,
+                    }}
+                  >
+                    JOURNALIST
+                  </span>
+                )}
+                <span style={{ fontSize: 11, opacity: 0.6 }}>
+                  • Credibility {post.user.credibility}%
+                </span>
+              </div>
+              <div style={{ fontSize: 10, opacity: 0.5 }}>{post.timestamp}</div>
+            </div>
+
+            {/* AI Badge */}
+            <div
+              style={{
+                padding: "4px 8px",
+                borderRadius: 6,
+                background: verdict.bg,
+                border: `1px solid ${verdict.border}`,
+                color: verdict.text,
+                fontSize: 10,
+                fontWeight: 700,
+              }}
+            >
+              {post.aiVerdict} ({post.aiConfidence}%)
+            </div>
+          </div>
+
+          {/* Title & Content */}
+          <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px 0" }}>
+            {post.title}
+          </h3>
+          <p style={{ fontSize: 13, lineHeight: 1.6, margin: "0 0 12px 0", opacity: 0.9 }}>
+            {post.content}
+          </p>
+
+          {/* Sources */}
+          {post.sources && post.sources.length > 0 && (
+            <div
+              style={{
+                padding: 8,
+                borderRadius: 6,
+                background: "rgba(34,197,94,0.08)",
+                border: "1px solid rgba(34,197,94,0.2)",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", marginBottom: 4 }}>
+                📎 SOURCES:
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.9 }}>
+                {post.sources.map((s, i) => (
+                  <div key={i}>• {s}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div style={{ fontSize: 12, opacity: 0.7, display: "flex", gap: 12 }}>
+            <span>💬 {post.commentCount} comments</span>
+            <button
+              style={{
+                background: "none",
+                border: "none",
+                color: "inherit",
+                cursor: "pointer",
+                padding: 0,
+                fontSize: 12,
+              }}
+            >
+              Reply
+            </button>
+            <button
+              style={{
+                background: "none",
+                border: "none",
+                color: "inherit",
+                cursor: "pointer",
+                padding: 0,
+                fontSize: 12,
+              }}
+            >
+              Share
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TopicPage() {
   const params = useParams<{ topic?: string }>();
   const topic = decodeURIComponent(params?.topic ?? "");
 
   const [data, setData] = React.useState<Rundown | null>(null);
+  const [forumPosts, setForumPosts] = React.useState<ForumPost[]>([]);
+  const [showNewPost, setShowNewPost] = React.useState(false);
 
   React.useEffect(() => {
     if (!topic) return;
-    // fake “loading”
+    // fake "loading"
     setData(null);
-    const t = setTimeout(() => setData(fakeRundown(topic)), 350);
+    setForumPosts([]);
+    const t = setTimeout(() => {
+      setData(fakeRundown(topic));
+      setForumPosts(fakeForumPosts(topic));
+    }, 350);
     return () => clearTimeout(t);
   }, [topic]);
 
@@ -223,21 +507,149 @@ export default function TopicPage() {
         </div>
       </section>
 
-      {/* Forum placeholder */}
-      <section
-        style={{
-          marginTop: 20,
-          padding: 16,
-          borderRadius: 12,
-          border: "1px dashed rgba(255,255,255,0.2)",
-          opacity: 0.75,
-        }}
-      >
-        Forum (coming next): posts, credibility scores, sources
+      {/* Forum Section */}
+      <section style={{ marginTop: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
+            Community Discussion ({forumPosts.length})
+          </h2>
+          <button
+            onClick={() => setShowNewPost(!showNewPost)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              border: "1px solid rgba(34,197,94,0.5)",
+              background: showNewPost ? "rgba(34,197,94,0.2)" : "rgba(34,197,94,0.1)",
+              color: "#22c55e",
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            {showNewPost ? "Cancel" : "+ New Post"}
+          </button>
+        </div>
+
+        {/* New Post Form */}
+        {showNewPost && (
+          <div
+            style={{
+              marginBottom: 20,
+              padding: 16,
+              borderRadius: 10,
+              border: "1px solid rgba(34,197,94,0.3)",
+              background: "rgba(34,197,94,0.05)",
+            }}
+          >
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, opacity: 0.8 }}>
+                TITLE
+              </div>
+              <input
+                type="text"
+                placeholder="What's your question or insight?"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  background: "rgba(0,0,0,0.3)",
+                  color: "white",
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, opacity: 0.8 }}>
+                CONTENT
+              </div>
+              <textarea
+                placeholder="Share your thoughts... (AI will fact-check and add credibility score)"
+                style={{
+                  width: "100%",
+                  minHeight: 100,
+                  padding: "10px 12px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  background: "rgba(0,0,0,0.3)",
+                  color: "white",
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, opacity: 0.8 }}>
+                SOURCES (OPTIONAL - BOOSTS CREDIBILITY)
+              </div>
+              <input
+                type="text"
+                placeholder="Add links to sources (separated by commas)"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  background: "rgba(0,0,0,0.3)",
+                  color: "white",
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 11, opacity: 0.7 }}>
+                🤖 AI will analyze your post and assign a credibility score
+              </div>
+              <button
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#22c55e",
+                  color: "white",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Post (Demo - Login required in production)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Forum Posts */}
+        <div style={{ display: "grid", gap: 16 }}>
+          {forumPosts.length > 0 ? (
+            forumPosts.map((post) => <ForumPostCard key={post.id} post={post} />)
+          ) : (
+            <div
+              style={{
+                padding: 40,
+                textAlign: "center",
+                opacity: 0.5,
+                fontSize: 13,
+              }}
+            >
+              No forum posts yet. Be the first to start a discussion!
+            </div>
+          )}
+        </div>
       </section>
 
-      <div style={{ marginTop: 14, fontSize: 12, opacity: 0.55 }}>
-        demo note: this rundown is fake data right now — next we’ll generate it.
+      <div style={{ marginTop: 24, fontSize: 11, opacity: 0.5, textAlign: "center" }}>
+        <Link href="/" style={{ color: "inherit", textDecoration: "underline" }}>
+          ← Back to Search
+        </Link>
+        {" • "}
+        <Link href="/feed" style={{ color: "inherit", textDecoration: "underline" }}>
+          View Feed
+        </Link>
+        {" • "}
+        Demo data - AI fact-checking will be enabled when API is connected
       </div>
     </main>
   );

@@ -3,11 +3,96 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+// Simple Levenshtein distance for typo detection
+function levenshtein(a: string, b: string): number {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
 export default function Home() {
   const router = useRouter();
   const [q, setQ] = React.useState("");
+  const [smartSuggestion, setSmartSuggestion] = React.useState<string | null>(null);
 
   const suggestions = ["epstein", "tiktok ban", "inflation", "supreme court case"];
+
+  // Knowledge base for natural language and typo correction
+  const knowledgeBase = [
+    { terms: ["epstein", "epsteen", "epstien", "jeffrey epstein"], canonical: "epstein" },
+    { terms: ["tiktok", "tik tok", "tiktok ban", "tiktak"], canonical: "tiktok ban" },
+    { terms: ["inflation", "inflaton", "cpi", "consumer price"], canonical: "inflation" },
+    { terms: ["elon musk", "elon", "musk", "spacex", "space x"], canonical: "elon musk" },
+    { terms: ["trump", "donald trump", "president trump"], canonical: "trump" },
+    { terms: ["biden", "joe biden", "president biden"], canonical: "biden" },
+  ];
+
+  // Smart search: handles typos and natural language
+  React.useEffect(() => {
+    if (!q || q.length < 3) {
+      setSmartSuggestion(null);
+      return;
+    }
+
+    const lower = q.toLowerCase().trim();
+
+    // Check for exact match first
+    const exactMatch = knowledgeBase.find(kb =>
+      kb.terms.some(term => term === lower)
+    );
+    if (exactMatch && exactMatch.canonical !== lower) {
+      setSmartSuggestion(exactMatch.canonical);
+      return;
+    }
+
+    // Check for fuzzy match (typos)
+    for (const kb of knowledgeBase) {
+      for (const term of kb.terms) {
+        const distance = levenshtein(lower, term);
+        // If typo distance is small (1-2 chars different), suggest correction
+        if (distance > 0 && distance <= 2 && term.length > 3) {
+          setSmartSuggestion(kb.canonical);
+          return;
+        }
+      }
+    }
+
+    // Check if query contains multiple search terms (natural language)
+    const words = lower.split(/\s+/);
+    if (words.length > 3) {
+      // Complex query like "epstein involved with elon musk space x?"
+      const matches: string[] = [];
+      for (const kb of knowledgeBase) {
+        if (kb.terms.some(term => lower.includes(term))) {
+          matches.push(kb.canonical);
+        }
+      }
+      if (matches.length > 0) {
+        setSmartSuggestion(matches.join(" + "));
+        return;
+      }
+    }
+
+    setSmartSuggestion(null);
+  }, [q]);
 
   function goSearch(value?: string) {
     const query = (value ?? q).trim();
@@ -67,7 +152,7 @@ export default function Home() {
             onKeyDown={(e) => {
               if (e.key === "Enter") goSearch();
             }}
-            placeholder='type here… (example: "epstein")'
+            placeholder='type here… (try: "epsteen" or "epstein + elon musk")'
             style={{
               flex: 1,
               padding: "10px 12px",
@@ -92,6 +177,46 @@ export default function Home() {
             Enter
           </button>
         </div>
+
+        {/* Smart Suggestion */}
+        {smartSuggestion && (
+          <div
+            style={{
+              marginTop: 10,
+              padding: "8px 12px",
+              borderRadius: 8,
+              background: "rgba(234,179,8,0.15)",
+              border: "1px solid rgba(234,179,8,0.3)",
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ opacity: 0.8 }}>🤖 Did you mean:</span>
+            <button
+              onClick={() => {
+                setQ(smartSuggestion);
+                goSearch(smartSuggestion);
+              }}
+              style={{
+                background: "rgba(234,179,8,0.2)",
+                border: "1px solid rgba(234,179,8,0.5)",
+                borderRadius: 6,
+                padding: "4px 10px",
+                color: "#eab308",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              "{smartSuggestion}"
+            </button>
+            <span style={{ opacity: 0.6, fontSize: 12 }}>
+              (AI detected typo or natural language query)
+            </span>
+          </div>
+        )}
 
         <div style={{ marginTop: 10, fontSize: 13, opacity: 0.8 }}>
           try:{" "}
