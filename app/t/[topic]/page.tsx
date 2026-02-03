@@ -386,15 +386,61 @@ export default function TopicPage() {
     <main
       style={{
         minHeight: "100vh",
-        padding: 32,
         background: "#0b0e14",
         color: "white",
         fontFamily:
           'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       }}
     >
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-        <h1 style={{ fontSize: 26, margin: 0 }}>Topic: {topic || "—"}</h1>
+      {/* Header */}
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          background: "rgba(11,14,20,0.95)",
+          backdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+          padding: "12px 20px",
+          zIndex: 100,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: "0 auto",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              letterSpacing: 1,
+              textDecoration: "none",
+              color: "white",
+            }}
+          >
+            GROUNDed
+          </Link>
+
+          <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
+            <Link href="/feed" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>
+              Feed
+            </Link>
+            <Link href="/" style={{ color: "#22c55e", textDecoration: "none" }}>
+              Search
+            </Link>
+            <span style={{ color: "rgba(255,255,255,0.5)" }}>Profile</span>
+          </div>
+        </div>
+      </header>
+
+      <div style={{ padding: 32 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+          <h1 style={{ fontSize: 26, margin: 0 }}>Topic: {topic || "—"}</h1>
         {data ? (
           <span
             style={{
@@ -640,16 +686,9 @@ export default function TopicPage() {
         </div>
       </section>
 
-      <div style={{ marginTop: 24, fontSize: 11, opacity: 0.5, textAlign: "center" }}>
-        <Link href="/" style={{ color: "inherit", textDecoration: "underline" }}>
-          ← Back to Search
-        </Link>
-        {" • "}
-        <Link href="/feed" style={{ color: "inherit", textDecoration: "underline" }}>
-          View Feed
-        </Link>
-        {" • "}
-        Demo data - AI fact-checking will be enabled when API is connected
+        <div style={{ marginTop: 24, fontSize: 11, opacity: 0.5, textAlign: "center" }}>
+          Demo data - AI fact-checking will be enabled when API is connected
+        </div>
       </div>
     </main>
   );
