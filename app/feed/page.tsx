@@ -261,7 +261,9 @@ export default function FeedPage() {
             <Link href="/" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>
               Search
             </Link>
-            <span style={{ color: "rgba(255,255,255,0.5)" }}>Profile</span>
+            <Link href="/profile" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>
+              Profile
+            </Link>
           </div>
         </div>
       </header>
