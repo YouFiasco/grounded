@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
+import Header from "@/components/Header";
 
 type UserPost = {
   id: string;
@@ -111,51 +112,7 @@ export default function ProfilePage() {
           'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       }}
     >
-      {/* Header */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          background: "rgba(11,14,20,0.95)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(255,255,255,0.1)",
-          padding: "12px 20px",
-          zIndex: 100,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Link
-            href="/"
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              letterSpacing: 1,
-              textDecoration: "none",
-              color: "white",
-            }}
-          >
-            GROUNDed
-          </Link>
-
-          <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
-            <Link href="/feed" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>
-              Feed
-            </Link>
-            <Link href="/" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>
-              Search
-            </Link>
-            <span style={{ color: "#22c55e" }}>Profile</span>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 20px" }}>
         {/* Profile Header */}

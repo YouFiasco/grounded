@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 type Rundown = {
   topic: string;
@@ -369,17 +370,138 @@ export default function TopicPage() {
   const [data, setData] = React.useState<Rundown | null>(null);
   const [forumPosts, setForumPosts] = React.useState<ForumPost[]>([]);
   const [showNewPost, setShowNewPost] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Form state
+  const [postTitle, setPostTitle] = React.useState("");
+  const [postContent, setPostContent] = React.useState("");
+  const [postSources, setPostSources] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  // Fetch forum posts for this topic
+  const fetchPosts = React.useCallback(() => {
+    fetch(`/api/posts?topic=${encodeURIComponent(topic)}`)
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.success) {
+          setForumPosts(result.posts);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch posts:", err);
+        // Fallback to fake posts if API fails
+        setForumPosts(fakeForumPosts(topic));
+      });
+  }, [topic]);
+
+  // Submit a new post
+  const handleSubmitPost = async () => {
+    if (!postTitle.trim() || !postContent.trim()) {
+      setSubmitError("Title and content are required");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const sourcesArray = postSources
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      const response = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic,
+          title: postTitle,
+          content: postContent,
+          sources: sourcesArray.length > 0 ? sourcesArray : undefined,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create post");
+      }
+
+      // Success! Clear form and refresh posts
+      setPostTitle("");
+      setPostContent("");
+      setPostSources("");
+      setShowNewPost(false);
+      fetchPosts(); // Refresh the posts list
+    } catch (err: any) {
+      console.error("Submit post error:", err);
+      setSubmitError(err.message || "Failed to create post");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   React.useEffect(() => {
     if (!topic) return;
-    // fake "loading"
+
+    // Reset state
     setData(null);
     setForumPosts([]);
-    const t = setTimeout(() => {
-      setData(fakeRundown(topic));
-      setForumPosts(fakeForumPosts(topic));
-    }, 350);
-    return () => clearTimeout(t);
+    setLoading(true);
+    setError(null);
+
+    // Fetch forum posts
+    fetchPosts();
+
+    // Call REAL AI fact-checking API
+    fetch("/api/fact-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: topic, type: "topic" }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((err) => {
+            throw new Error(err.error || "Failed to fact-check");
+          });
+        }
+        return res.json();
+      })
+      .then((result) => {
+        if (result.success && result.data) {
+          const aiData = result.data;
+          setData({
+            topic,
+            updatedAt: new Date().toLocaleString(),
+            verdict: aiData.verdict || "Mixed/Disputed",
+            summary: aiData.summary || ["AI analysis in progress..."],
+            keyClaims: aiData.keyClaims?.map((claim: any) => ({
+              label: claim.claim || claim.label || "Unknown claim",
+              confidence: claim.confidence || 0.5,
+              notes: claim.notes || "",
+            })) || [],
+            related: [
+              `${topic} timeline`,
+              `${topic} key claims`,
+              `${topic} what's verified`,
+              `${topic} disputed points`,
+              `${topic} primary sources`,
+            ],
+          });
+        } else {
+          throw new Error("Invalid AI response");
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Fact-check error:", err);
+        setError(err.message || "Failed to load AI analysis");
+        setLoading(false);
+        // Fallback to fake data on error
+        setData(fakeRundown(topic));
+      });
   }, [topic]);
 
   return (
@@ -392,51 +514,7 @@ export default function TopicPage() {
           'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       }}
     >
-      {/* Header */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          background: "rgba(11,14,20,0.95)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(255,255,255,0.1)",
-          padding: "12px 20px",
-          zIndex: 100,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Link
-            href="/"
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              letterSpacing: 1,
-              textDecoration: "none",
-              color: "white",
-            }}
-          >
-            GROUNDed
-          </Link>
-
-          <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
-            <Link href="/feed" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>
-              Feed
-            </Link>
-            <Link href="/" style={{ color: "#22c55e", textDecoration: "none" }}>
-              Search
-            </Link>
-            <span style={{ color: "rgba(255,255,255,0.5)" }}>Profile</span>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <div style={{ padding: 32 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
@@ -458,8 +536,25 @@ export default function TopicPage() {
       </div>
 
       <div style={{ marginTop: 8, opacity: 0.65, fontSize: 12 }}>
-        {data ? `updated: ${data.updatedAt}` : "loading rundown…"}
+        {loading ? "🤖 AI analyzing topic..." : data ? `updated: ${data.updatedAt}` : "loading rundown…"}
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: 12,
+            borderRadius: 8,
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.3)",
+            color: "#ef4444",
+            fontSize: 13,
+          }}
+        >
+          ⚠️ {error} - Showing fallback data
+        </div>
+      )}
 
       {/* AI Rundown */}
       <section
@@ -472,7 +567,7 @@ export default function TopicPage() {
         }}
       >
         <div style={{ fontWeight: 700, marginBottom: 8 }}>
-          AI Fact Rundown {data ? "" : "(loading)"}
+          {loading ? "🤖 AI Fact-Checking..." : "AI Fact Rundown"} {!loading && !data && "(loading)"}
         </div>
 
         {data ? (
@@ -593,7 +688,10 @@ export default function TopicPage() {
               </div>
               <input
                 type="text"
+                value={postTitle}
+                onChange={(e) => setPostTitle(e.target.value)}
                 placeholder="What's your question or insight?"
+                disabled={submitting}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -611,7 +709,10 @@ export default function TopicPage() {
                 CONTENT
               </div>
               <textarea
+                value={postContent}
+                onChange={(e) => setPostContent(e.target.value)}
                 placeholder="Share your thoughts... (AI will fact-check and add credibility score)"
+                disabled={submitting}
                 style={{
                   width: "100%",
                   minHeight: 100,
@@ -632,7 +733,10 @@ export default function TopicPage() {
               </div>
               <input
                 type="text"
+                value={postSources}
+                onChange={(e) => setPostSources(e.target.value)}
                 placeholder="Add links to sources (separated by commas)"
+                disabled={submitting}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -645,23 +749,44 @@ export default function TopicPage() {
                 }}
               />
             </div>
+
+            {/* Submit Error */}
+            {submitError && (
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: 10,
+                  borderRadius: 6,
+                  background: "rgba(239,68,68,0.1)",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  color: "#ef4444",
+                  fontSize: 12,
+                }}
+              >
+                ⚠️ {submitError}
+              </div>
+            )}
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontSize: 11, opacity: 0.7 }}>
-                🤖 AI will analyze your post and assign a credibility score
+                {submitting ? "🤖 AI analyzing your post..." : "🤖 AI will analyze your post and assign a credibility score"}
               </div>
               <button
+                onClick={handleSubmitPost}
+                disabled={submitting}
                 style={{
                   padding: "8px 16px",
                   borderRadius: 6,
                   border: "none",
-                  background: "#22c55e",
+                  background: submitting ? "#666" : "#22c55e",
                   color: "white",
                   fontWeight: 600,
                   fontSize: 13,
-                  cursor: "pointer",
+                  cursor: submitting ? "not-allowed" : "pointer",
+                  opacity: submitting ? 0.7 : 1,
                 }}
               >
-                Post (Demo - Login required in production)
+                {submitting ? "Posting..." : "Post"}
               </button>
             </div>
           </div>
@@ -687,7 +812,7 @@ export default function TopicPage() {
       </section>
 
         <div style={{ marginTop: 24, fontSize: 11, opacity: 0.5, textAlign: "center" }}>
-          Demo data - AI fact-checking will be enabled when API is connected
+          AI-powered fact-checking enabled • Posts stored in-memory (reset on server restart)
         </div>
       </div>
     </main>
